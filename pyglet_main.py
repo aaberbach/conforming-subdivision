@@ -19,6 +19,7 @@ title = "Conforming Subdivision"
 
 # creating a window
 window = pyglet.window.Window(width, height, title, )#resizable=False)
+pyglet.gl.glClearColor(24/255,24/255,24/255,1)
 
 # text 
 text = "GeeksforGeeks"
@@ -56,11 +57,11 @@ def on_draw():
 # key press event 
 @window.event
 def on_key_press(symbol, modifier):
-    manager.on_key_press(symbol, modifier)
-    # # key "C" get press
-    # if symbol == pyglet.window.key.C:
-        
-    #     print("Key C is pressed")
+    global manager
+    if symbol == pyglet.window.key.ENTER:
+        manager = manager.next_manager()
+    else:
+        manager.on_key_press(symbol, modifier)
 
 
 # on mouse drag event

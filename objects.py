@@ -25,7 +25,7 @@ class Point:
     def has_shape(self):
         return not (self._shape is None)
     
-    def distance(self, p):
+    def point_distance(self, p):
         return math.sqrt((p.get_x() - self._x)**2 + (p.get_y() - self._y)**2)
 
     def distance(self, x, y):
@@ -37,7 +37,7 @@ class Circle:
         self._rightmost_point = Point(x + r, y, mod_func)
         self._leftmost_point = Point(x - r, y, mod_func)
         self._r = r
-        self._shape = []#{"circle": None, "rightmost_point": None, "leftmost_point": None}
+        self._shape = None#{"circle": None, "rightmost_point": None, "leftmost_point": None}
 
     def get_r(self):
         return self._r
@@ -52,10 +52,10 @@ class Circle:
         return self._leftmost_point
     
     def add_shape(self, shape):
-        self._shape.append(shape)
+        self._shape = shape
 
     def has_shape(self):
-        return len(self._shape) != 0
+        return not (self._shape is None)#len(self._shape) != 0
     
     def get_shape(self):
         return self._shape
