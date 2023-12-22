@@ -4,6 +4,9 @@ import pyglet.window.key
 from subdivision import PointSubdivision
 from objects import Point
 from draw import *
+from event_managers import *
+
+# TODO: add in mod functions
 
 # width of window
 width = 1500
@@ -37,6 +40,8 @@ new_label = pyglet.text.Label(text,
 subdivision = PointSubdivision()
 subdivision_drawer = PointSubdivisionDrawer(subdivision)
 
+manager = CircleInputManager()
+
 # on draw event
 @window.event
 def on_draw(): 
@@ -44,36 +49,37 @@ def on_draw():
     window.clear()
     window.dispatch_events()
 
-    # drawing the label on the window
-    label.draw()
-    new_label.draw()
-
-    subdivision_drawer.draw()
+    manager.on_draw()
+    #subdivision_drawer.draw()
 
 	
 # key press event 
 @window.event
 def on_key_press(symbol, modifier):
-
-    # key "C" get press
-    if symbol == pyglet.window.key.C:
+    manager.on_key_press(symbol, modifier)
+    # # key "C" get press
+    # if symbol == pyglet.window.key.C:
         
-        print("Key C is pressed")
+    #     print("Key C is pressed")
 
 
 # on mouse drag event
 @window.event
 def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
-
+    manager.on_mouse_drag(x, y, dx, dy, buttons, modifiers)
     # printing some message
-    print(f"{x},{y}   {dx},{dy}")
+    #print(f"{x},{y}   {dx},{dy}")
 	
 @window.event
 def on_mouse_press(x, y, button, modifiers):
-    p = Point(x, y)
-    subdivision.add_point(p)
+    manager.on_mouse_press(x, y, button, modifiers)
+    # p = Point(x, y)
+    # subdivision.add_point(p)
 
 
+@window.event
+def on_mouse_release(x, y, button, modifiers):
+    manager.on_mouse_release(x, y, button, modifiers)
 
 				
 # start running the application
