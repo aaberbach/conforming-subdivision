@@ -64,7 +64,7 @@ class CircleInputManager(Manager):
 
         r = self._temp_center.distance(x, y)
 
-        # Only keep new circle if it is far enough from existing circles
+        # Only keep new circle if it is large enough and far enough from existing circles
         if self._is_temp_circle_valid(r):
             self._circle_subdivision.add_circle(Circle(self._temp_center.get_x(), 
                             self._temp_center.get_y(), r))
@@ -76,8 +76,16 @@ class CircleInputManager(Manager):
         return PointSubdivisionManager(self._circle_subdivision, self._circle_drawer)
 
     def _is_temp_circle_valid(self, r):
+        if r < 2:
+            return False
         for c in self._circle_subdivision.get_circles():
-            if c.get_center().point_distance(self._temp_center) <= c.get_r() + r + 20:
+            horizontal_distance = (abs(c.get_center().get_alg_x() - self._temp_center.get_alg_x())
+                        - r - c.get_r())
+            vertical_distance = (abs(c.get_center().get_alg_y() - self._temp_center.get_alg_y()))
+            
+            if horizontal_distance < 16 and vertical_distance < 16:
+                return False
+            if c.get_center().point_distance(self._temp_center) <= c.get_r() + r + 1:
                 return False
             
         return True

@@ -5,6 +5,8 @@ from subdivision import PointSubdivision
 from objects import Point
 from draw import *
 from event_managers import *
+from pyglet.gl import *
+from pyglet.math import *
 
 # TODO: add in mod functions
 
@@ -18,7 +20,7 @@ height = 1000
 title = "Conforming Subdivision"
 
 # creating a window
-window = pyglet.window.Window(width, height, title, )#resizable=False)
+window = pyglet.window.Window(width, height, title)
 pyglet.gl.glClearColor(24/255,24/255,24/255,1)
 
 # text 
@@ -38,9 +40,8 @@ new_label = pyglet.text.Label(text,
 						font_size = 10,
 						x = 25, y = 25)
 
-subdivision = PointSubdivision()
-subdivision_drawer = PointSubdivisionDrawer(subdivision)
 
+instruction_bar = InstructionBar(width, height, height * 0.15)
 manager = CircleInputManager()
 
 # on draw event
@@ -51,9 +52,25 @@ def on_draw():
     window.dispatch_events()
 
     manager.on_draw()
-    #subdivision_drawer.draw()
+    instruction_bar.draw()
 
-	
+# @window.event       
+# def on_resize(width, height):
+#     pass
+#     # glMatrixMode(gl.GL_PROJECTION)
+#     # glLoadIdentity()
+
+#     # glViewport(0, 0, width, height)
+#     # gluOrtho2D(0, self.default_width, 0, self.default_height)
+#     # glMatrixMode(gl.GL_MODELVIEW)
+#     # glViewport(0, 0, *window.get_framebuffer_size())
+#     # window.projection = Mat4.orthogonal_projection(0, width, 0, height, -255, 255)
+    
+# @window.event
+# def on_resize(width, height):
+#     if width != 1500 or height != 1000:
+#         window.set_size(1500, 1000)
+
 # key press event 
 @window.event
 def on_key_press(symbol, modifier):

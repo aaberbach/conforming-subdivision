@@ -46,3 +46,26 @@ class CircleSubdivisionDrawer:
     def draw(self):
         self.update_circles()
         self._circle_batch.draw()
+
+
+class InstructionBar:
+    def __init__(self, window_w, window_h, bar_h) -> None:
+        self._window_w = window_w
+        self._window_h = window_h
+        self._bar_h = bar_h
+        self._background_batch = pyglet.graphics.Batch()
+        self._foreground_batch = pyglet.graphics.Batch()
+
+        self._background = shapes.Rectangle(0, 0, self._window_w, self._bar_h, 
+                        color = (160,160,160),
+                        batch=self._background_batch)
+        
+        self._shapes = [self._background]
+    
+    def draw(self):
+        self._background_batch.draw()
+        self._foreground_batch.draw()
+
+    # def on_resize(self, width, height):
+    #     shift = self._window_w
+    #     for shape in self._shapes:
