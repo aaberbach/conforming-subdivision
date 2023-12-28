@@ -41,8 +41,14 @@ new_label = pyglet.text.Label(text,
 						x = 25, y = 25)
 
 
+def mod_func(x, y):
+    return x + 0.5, y + 0.5
+
+def inverse_mod_func(x, y):
+    return x - 0.5, y - 0.5
+
 instruction_bar = InstructionBar(width, height, height * 0.15)
-manager = CircleInputManager()
+manager = CircleInputManager(mod_func, inverse_mod_func)
 
 # on draw event
 @window.event
@@ -75,10 +81,10 @@ def on_draw():
 @window.event
 def on_key_press(symbol, modifier):
     global manager
-    if symbol == pyglet.window.key.ENTER:
+
+    ret = manager.on_key_press(symbol, modifier)
+    if symbol == pyglet.window.key.ENTER and not (ret is None):
         manager = manager.next_manager()
-    else:
-        manager.on_key_press(symbol, modifier)
 
 
 # on mouse drag event
