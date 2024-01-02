@@ -22,9 +22,13 @@ class Manager:
         pass
 
 class CircleInputManager(Manager):
-    def __init__(self, mod_func, inverse_mod_func):
+    def __init__(self, mod_func, inverse_mod_func, instruction_bar):
         self._circle_subdivision = CircleSubdivision()
         self._circle_drawer = CircleSubdivisionDrawer(self._circle_subdivision)
+
+        self._instruction_bar = instruction_bar
+        self._instruction_bar.set_line1('<font size="5">Click and drag to input circles. Circles cannot be too small or too close to eachother for visualization reasons.</font>')
+        self._instruction_bar.set_line2('<font size="5" color="#AD4D02">red</font><font size="5"> = invalid</font><font size="5" color="#009E73">  green</font><font size="5"> = valid</font>')
         # self._point_subdivision = PointSubdivision()
         # self._point_drawer = PointSubdivisionDrawer(self._point_subdivision)
 
@@ -32,6 +36,7 @@ class CircleInputManager(Manager):
         self._inverse_mod_func = inverse_mod_func
 
         self._temp_circle_batch = pyglet.graphics.Batch()
+        print("Temp circle batch", self._temp_circle_batch)
         self._temp_circle = None
         self._temp_center = None
 
@@ -45,7 +50,7 @@ class CircleInputManager(Manager):
             if c.get_center().distance(x, y, mod_func=self._mod_func) <= c.get_alg_r():
                 return
 
-        self._temp_center = Point(x, y)
+        self._temp_center = Point.from_mod_func(x, y, self._mod_func)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         if self._temp_center is None:
@@ -118,10 +123,18 @@ class PointSubdivisionManager(Manager):
                                                    inverse_mod_func=self._inverse_mod_func)
         self._point_drawer = PointSubdivisionDrawer(self._point_subdivision)
 
-        self._subdivision_initialized = False
-        self._point_subdivision._initialize_subdivision(3)
-        self._point_drawer.update_subdivision()
+        #self._point_subdivision._initialize_subdivision(3)
+        #self._point_drawer.update_batches()
 
     def on_draw(self):
         self._circle_drawer.draw()
         self._point_drawer.draw()
+
+    def on_key_press(self, symbol, modifier):
+        if symbol == pyglet.window.key.ENTER:
+            if not self._point_subdivision.is_initialized():
+                self._point_subdivision._initialize_subdivision(3)
+            else:
+                self._point_subdivision._next_stage()
+            
+            self._point_drawer.update_batches()

@@ -3,12 +3,24 @@ from pyglet import shapes
 import networkx as nx
 from objects import *
 
+# Given a point, return the bottom left corner
+# of the ibox it is in
+def ibox_of_point(x, y, i):
+    side_length = 2**i
+
+    res_x = (x // side_length) * side_length
+    res_y = (y // side_length) * side_length
+
+    return res_x, res_y
+
 class PointSubdivision:
     def __init__(self, points = [], 
             mod_func = lambda x,y: (x,y), inverse_mod_func = lambda x,y: (x,y)) -> None:
         self._points = points
         self._inverse_mod_func = inverse_mod_func
         self._mod_func = mod_func
+        self._initialized = False
+
 
     def get_points(self):
         return self._points
@@ -18,18 +30,113 @@ class PointSubdivision:
 
     def get_Q(self):
         return self._Q
+    
+    def get_prev_Q(self):
+        return self._previous_Q
+
+    def get_drawn_subdiv(self):
+        return self._drawn
+    
+    def get_newly_drawn_subdiv(self):
+        return self._newly_drawn
+    
+    def is_initialized(self):
+        return self._initialized
 
     def _initialize_subdivision(self, i):
+        self._initialized = True
+        self._previous_Q = []
         self._Q = []
+        self._drawn = Graph(self._inverse_mod_func)
+        self._newly_drawn = Graph(self._inverse_mod_func)
         self._i = i
         side_length = 2**i
 
         for p in self._points:
-            alg_x = ((p.get_alg_x() // side_length) * side_length) 
-            alg_y = ((p.get_alg_y() // side_length) * side_length) - 3*side_length
+            box_alg_x, box_alg_y = ibox_of_point(p.get_alg_x(), p.get_alg_y(), self._i)
+            #box_alg_x = ((p.get_alg_x() // side_length) * side_length)
+            #box_alg_y = ((p.get_alg_y() // side_length) * side_length)
 
-            bottom_left_corner = Point.from_inverse_mod_func(alg_x, alg_y, self._inverse_mod_func)
-            self._Q.append(IQuad(bottom_left_corner, i, self._inverse_mod_func))
+            quad_alg_x = box_alg_x - side_length
+            quad_alg_y = box_alg_y - 2*side_length
+
+            self._drawn.add_square(box_alg_x, box_alg_y, side_length)
+
+            bottom_left_corner = Point.from_inverse_mod_func(quad_alg_x, quad_alg_y, self._inverse_mod_func)
+            self._Q.append([IQuad(bottom_left_corner, i, self._inverse_mod_func)])
+
+    def _reset_previous_Q(self):
+        for comp in self._previous_Q:
+            for quad in comp:
+                quad.delete_shapes()
+        self._previous_Q = self._Q.copy()
+
+    def _next_stage(self):
+        self._reset_previous_Q()
+        self._i += 2
+        self._Q = []
+        self._newly_drawn = Graph(self._inverse_mod_func)
+
+        self._build_new_Q()
+        self._draw_new_subdivision()
+
+    def _build_new_Q(self):
+        for equiv_class in self._previous_Q:
+            self._Q += self._grow(equiv_class)
+
+        G = nx.Graph()
+        G.add_nodes_from([i for i in range(len(self._Q))])
+
+        for i, q1 in enumerate(self._Q):
+            for j, q2 in enumerate(self._Q):
+                if i != j and q1.does_interior_overlap(q2):
+                    G.add_edge(i, j)
+
+        conn_comps = nx.connected_components(G)
+
+        self._Q = [[self._Q[i] for i in comp] for comp in conn_comps]
+
+    def _draw_new_subdivision(self):
+        self._process_simple_components()
+        self._process_complex_components()
+    
+    # MIGHT NOT BE WORKING, CONSIDER VERY CLOSE POINTS
+    def _process_simple_components(self):
+        a = 23
+        for component in self._previous_Q:
+            if len(component) == 1:
+                q = component[0]
+                # if q is a simple component
+                if len(q.get_children()) <= 1:
+                    q_hat = q.grow()
+                    # if q_hat is not a simple component
+                    if len(q_hat.get_children()) != 1 or ([q_hat] not in self._Q):
+                        p = q.get_bottom_left_corner()
+                        x = p.get_alg_x()
+                        y = p.get_alg_y()
+                        side_length = 2**self._i
+
+                        self._drawn.add_square(x, y, side_length, [True,True,True,True])
+                        self._newly_drawn.add_square(x, y, side_length, [True,True,True,True])
+
+    def _process_complex_components(self):
+        for S in self._Q:
+            children = self._children_of_component(S)
+
+            # if S is a complex component
+            if len(children) > 1:
+                # ydd
+                pass
+    
+    def _children_of_component(self, S):
+        children = []
+
+        for quad in S:
+            for child in quad.get_children():
+                if child not in children:
+                    children.append(child)
+
+        return children
 
     # Follows growth algorithm in section 6.4
     def _grow(self, S):
@@ -40,7 +147,24 @@ class PointSubdivision:
 
         for i, q1 in enumerate(S):
             for j, q2 in enumerate(S):
+                # NOT ACCURATE MAY NOT FIT BC OF SHIFT FOR VALID IBOX
                 if i != j and q1.does_closure_overlap(q2):
+                    q1_bottom_left = q1.get_bottom_left_corner()
+                    q2_bottom_left = q2.get_bottom_left_corner()
+
+                    min_x = min(q1_bottom_left.get_alg_x(), q2_bottom_left.get_alg_x())
+                    min_y = min(q1_bottom_left.get_alg_y(), q2_bottom_left.get_alg_y())
+
+                    core_bottom_left_x, core_bottom_left_y = ibox_of_point(min_x, min_y, self._i)
+
+                    for q in [q1, q2]:
+                        y_diff = q.get_boxes()[0][3].get_vertices()[0][1].get_alg_y() - core_bottom_left_y
+                        x_diff = q.get_boxes()[3][0].get_vertices()[1][0].get_alg_x() - core_bottom_left_x
+
+                        # Checks if the quad surpases the core boundary
+                        if y_diff > 2*(2**self._i) or x_diff > 2*(2**self._i):
+                            continue
+
                     G.add_edge(i, j)
 
         matching = nx.maximal_matching(G)
@@ -50,29 +174,47 @@ class PointSubdivision:
             covered_quads.append(e[0])
             covered_quads.append(e[1])
 
-            q1 = S[e[0]], q2 = S[e[1]]
+            q1 = S[e[0]]
+            q2 = S[e[1]]
             q1_bottom_left = q1.get_bottom_left_corner()
             q2_bottom_left = q2.get_bottom_left_corner()
 
+            min_x = min(q1_bottom_left.get_alg_x(), q2_bottom_left.get_alg_x())
+            min_y = min(q1_bottom_left.get_alg_y(), q2_bottom_left.get_alg_y())
 
-            core_bottom_left_x = min(q1_bottom_left.get_alg_x(), q2_bottom_left.get_alg_x())
-            core_bottom_left_y = min(q1_bottom_left.get_alg_y(), q2_bottom_left.get_alg_y())
+            core_bottom_left_x, core_bottom_left_y = ibox_of_point(min_x, min_y, self._i)
+
+            # core_bottom_left_x = min(q1_bottom_left.get_alg_x(), q2_bottom_left.get_alg_x())
+            # core_bottom_left_y = min(q1_bottom_left.get_alg_y(), q2_bottom_left.get_alg_y())
+
+            #print(self._i, core_bottom_left_x, core_bottom_left_y)
 
             core_bottom_left = Point.from_inverse_mod_func(core_bottom_left_x, 
                                     core_bottom_left_y, self._inverse_mod_func)
             
-            parent_quad = IQuad.from_core_bottom_left(core_bottom_left, q1.get_i(), self._inverse_mod_func)
+            parent_quad = IQuad.from_core_bottom_left(core_bottom_left, self._i, self._inverse_mod_func)
             results.append(parent_quad)
+
+            parent_quad.add_child(q1)
+            parent_quad.add_child(q2)
 
             q1.set_grown(parent_quad)
             q2.set_grown(parent_quad)
 
         for i, quad in enumerate(S):
             if i not in covered_quads:
-                parent_quad = IQuad.from_core_bottom_left(quad.get_bottom_left_corner(),
-                                    quad.get_i(), self._inverse_mod_func)
+                min_p = quad.get_bottom_left_corner()
+                min_x = min_p.get_alg_x()
+                min_y = min_p.get_alg_y()
+
+                alg_x, alg_y = ibox_of_point(min_x, min_y, i=self._i)
+
+                parent_quad = IQuad.from_core_bottom_left(
+                                    Point.from_inverse_mod_func(alg_x, alg_y, self._inverse_mod_func),
+                                    self._i, self._inverse_mod_func)
                 
                 results.append(parent_quad)
+                parent_quad.add_child(quad)
                 quad.set_grown(parent_quad)
 
         return results

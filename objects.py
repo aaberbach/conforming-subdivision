@@ -1,17 +1,21 @@
 import math
 from typing import Any
+import networkx as nx
 
 class Point:
-    def __init__(self, x: int, y: int, alg_x=-1, alg_y=-1) -> None:
+    def __init__(self, x: int, y: int, alg_x=None, alg_y=None) -> None:
         self._x = x
         self._y = y
 
         self._alg_x = alg_x
         self._alg_y = alg_y
+
+        # if x == alg_x or y == alg_y or alg_x is None or alg_y is None:
+        #     raise Exception()
         
-        if alg_x < 0:
+        if alg_x is None:
             self._alg_x = self._x
-        if alg_y < 0:
+        if alg_y is None:
             self._alg_y = self._y
 
         self._shape = None
@@ -43,6 +47,13 @@ class Point:
 
     def has_shape(self):
         return not (self._shape is None)
+    
+    def get_shape(self):
+        return self._shape
+    
+    def delete_shape(self):
+        self._shape.delete()
+        self._shape = None
     
     def point_distance(self, p, mod=False):
         if mod:
@@ -112,11 +123,19 @@ class Edge:
 
     def has_shape(self):
         return not (self._shape is None)
+
+    def delete_shape(self):
+        self._shape.delete()
+        self._shape = None
     
 class IBox:
     def __init__(self, bottom_left_corner, i, inverse_mod_func=lambda x,y: (x,y)):
         self._i = i
         self._side_length = 2**i
+
+        if (bottom_left_corner.get_alg_x() % self._side_length != 0
+            or bottom_left_corner.get_alg_y() % self._side_length != 0):
+            raise Exception("Not a valid IBox", bottom_left_corner.get_alg_x(), bottom_left_corner.get_alg_y(), side_length)
 
         self._inverse_mod_func = inverse_mod_func
 
@@ -154,6 +173,14 @@ class IBox:
     
     def get_edges(self):
         return self._edges
+
+    def delete_shapes(self):
+        for row in self._vertices:
+            for v in row:
+                v.delete_shape()
+        
+        for e in self._edges:
+            e.delete_shape()
     
 class IQuad:
     def __init__(self, bottom_left_corner, i, inverse_mod_func=lambda x,y: (x,y)):
@@ -164,6 +191,11 @@ class IQuad:
         self._bottom_left_corner = bottom_left_corner
 
         side_length = 2**i
+
+        if (self._bottom_left_corner.get_alg_x() % side_length != 0
+            or self._bottom_left_corner.get_alg_y() % side_length != 0):
+            raise Exception("Not a valid IBox", self._bottom_left_corner.get_alg_x(), self._bottom_left_corner.get_alg_y(), side_length)
+
         center_x = bottom_left_corner.get_alg_x() + 2*side_length
         center_y = bottom_left_corner.get_alg_x() + 2*side_length
         self._center = Point.from_inverse_mod_func(center_x, center_y, self._inverse_mod_func)
@@ -171,6 +203,7 @@ class IQuad:
         self._fill_box_list(bottom_left_corner, i, inverse_mod_func)
 
         self._grown = None
+        self._children = []
 
     def from_core_bottom_left(core_bottom_left_corner, i, inverse_mod_func=lambda x,y: (x,y)):
         side_length = 2**i
@@ -183,12 +216,12 @@ class IQuad:
 
     def _fill_box_list(self, bottom_left_corner, i, inverse_mod_func):
         self._boxes = [[None, None, None, None] for i in range(0,4)]
-        side_length = 2**i
+        self._side_length = 2**i
 
         for x_steps in [0, 1, 2, 3]:
             for y_steps in [0, 1, 2, 3]:
-                alg_x = bottom_left_corner.get_alg_x() + x_steps*side_length
-                alg_y = bottom_left_corner.get_alg_y() + y_steps*side_length
+                alg_x = bottom_left_corner.get_alg_x() + x_steps*self._side_length
+                alg_y = bottom_left_corner.get_alg_y() + y_steps*self._side_length
                 x, y = self._inverse_mod_func(alg_x, alg_y)
                 
                 self._boxes[x_steps][y_steps] = IBox(Point(x, y, alg_x, alg_y), i, inverse_mod_func)
@@ -211,8 +244,19 @@ class IQuad:
     def grow(self):
         return self._grown
     
+    def delete_shapes(self):
+        for row in self._boxes:
+            for box in row:
+                box.delete_shapes()
+    
     def set_grown(self, quad):
         self._grown = quad
+
+    def add_child(self, quad):
+        self._children.append(quad)
+
+    def get_children(self):
+        return self._children
     
     def does_interior_overlap(self, q) -> bool:
         x_dist = abs(self._center.get_alg_x() - q.get_center().get_alg_x())
@@ -223,3 +267,59 @@ class IQuad:
         x_dist = abs(self._center.get_alg_x() - q.get_center().get_alg_x())
         y_dist = abs(self._center.get_alg_y() - q.get_center().get_alg_y())
         return (x_dist <= 4*self._side_length) and (y_dist <= 4*self._side_length)
+    
+class Graph:
+    def __init__(self, inverse_mod_func):
+        self._G = nx.Graph()
+        self._points = []
+        self._edges = []
+        self._inverse_mod_func = inverse_mod_func
+
+    def add_vertex(self, v):
+        if not v in self._G:
+            self._G.add_node(v)
+            self._points.append(Point.from_inverse_mod_func(v[0], 
+                                    v[1], self._inverse_mod_func))
+
+    def add_edge(self, u, v):
+        self._G.add_edge(u, v)
+        p1 = Point.from_inverse_mod_func(v[0], v[1], self._inverse_mod_func)
+        p2 = Point.from_inverse_mod_func(u[0], u[1], self._inverse_mod_func)
+
+        self._points.append(p1)
+        self._points.append(p2)
+
+        self._edges.append(Edge(p1, p2))
+
+    def get_vertices(self):
+        return self._points
+    
+    def get_edges(self):
+        return self._edges
+
+    # Adds a square to the graph with bottom left corner (x, y)
+    #  - break_in_fourths_flags tells whether to break up the edges, going in CW order
+    #        from the bottom left
+    def add_square(self, x, y, side_length, 
+                   break_in_fourths_flags=[False, False, False, False]):
+        self.add_vertex((x,y))
+
+        last_vertex = (x,y)
+        directions = [(0,1), (1,0), (0,-1), (-1,0)] # [up, right down, left]
+
+        for i, direction in enumerate(directions):
+            increment = side_length
+            if break_in_fourths_flags[i]:
+                increment /= 4.0
+
+            dist_moved = 0.0
+
+            while dist_moved < side_length:
+                dist_moved += increment
+
+                new_vertex = (last_vertex[0] + direction[0]*increment, 
+                              last_vertex[1] + direction[1]*increment)
+                
+                self.add_edge(last_vertex, new_vertex)
+                last_vertex = new_vertex
+
