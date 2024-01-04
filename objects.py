@@ -168,6 +168,9 @@ class IBox:
         self._edges.append(Edge(self._vertices[1][1], self._vertices[0][1]))
         self._edges.append(Edge(self._vertices[1][1], self._vertices[1][0]))
 
+    def get_bottom_left_corner(self):
+        return self._vertices[0][0]
+    
     def get_vertices(self):
         return self._vertices
     

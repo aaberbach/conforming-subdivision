@@ -13,6 +13,37 @@ def ibox_of_point(x, y, i):
 
     return res_x, res_y
 
+def get_quad_core_coordinates(q):
+    coords = []
+
+    for i in [1, 2]:
+        for j in [1, 2]:
+            p = q.get_box(i, j).get_bottom_left_corner()
+            coords.append((p.get_alg_x(), p.get_alg_y()))
+
+    return coords
+
+def get_quad_coordinates(q):
+    coords = []
+
+    for i in [0, 1, 2, 3]:
+        for j in [0, 1, 2, 3]:
+            p = q.get_box(i, j).get_bottom_left_corner()
+            coords.append((p.get_alg_x(), p.get_alg_y()))
+
+    return coords
+
+def decompose_ibox_coord(coord, i):
+    coords = []
+    x, y = coord
+    side_length = 2**(i-2)
+
+    for x_flag in [0, 1, 2, 3]:
+        for y_flag in [0, 1, 2, 3]:
+            coords.append((x + x_flag*side_length, y + y_flag*side_length))
+
+    return coords
+
 class PointSubdivision:
     def __init__(self, points = [], 
             mod_func = lambda x,y: (x,y), inverse_mod_func = lambda x,y: (x,y)) -> None:
@@ -102,7 +133,6 @@ class PointSubdivision:
     
     # MIGHT NOT BE WORKING, CONSIDER VERY CLOSE POINTS
     def _process_simple_components(self):
-        a = 23
         for component in self._previous_Q:
             if len(component) == 1:
                 q = component[0]
@@ -125,8 +155,34 @@ class PointSubdivision:
 
             # if S is a complex component
             if len(children) > 1:
-                # ydd
-                pass
+                R_2 = set()
+                R_1_split = set()
+                R_1_whole = set()
+                S_coords = set()
+
+                for q in children:
+                    g = q.grow()
+
+                    R_2.update(get_quad_coordinates(q))
+
+                    core_coords = get_quad_core_coordinates(g)
+                    R_1_whole.update(core_coords)
+                    for coord in core_coords:
+                        R_1_split.update(decompose_ibox_coord(coord, self._i))
+
+                    S_coords.update(get_quad_coordinates(g))
+
+                for coord in R_1_split.difference(R_2):
+                    self._drawn.add_square(coord[0], coord[1], 2**(self._i - 2))
+                    self._newly_drawn.add_square(coord[0], coord[1], 2**(self._i - 2))
+                
+                # STILL NEED TO SPLIT EDGES
+                for coord in S_coords.difference(R_1_whole):
+                    self._drawn.add_square(coord[0], coord[1], 2**(self._i))
+                    self._newly_drawn.add_square(coord[0], coord[1], 2**(self._i))
+
+
+
     
     def _children_of_component(self, S):
         children = []
