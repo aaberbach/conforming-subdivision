@@ -193,14 +193,10 @@ class IQuad:
 
         self._bottom_left_corner = bottom_left_corner
 
-        side_length = 2**i
+        self._side_length = 2**i
 
-        if (self._bottom_left_corner.get_alg_x() % side_length != 0
-            or self._bottom_left_corner.get_alg_y() % side_length != 0):
-            raise Exception("Not a valid IBox", self._bottom_left_corner.get_alg_x(), self._bottom_left_corner.get_alg_y(), side_length)
-
-        center_x = bottom_left_corner.get_alg_x() + 2*side_length
-        center_y = bottom_left_corner.get_alg_x() + 2*side_length
+        center_x = bottom_left_corner.get_alg_x() + 2*self._side_length
+        center_y = bottom_left_corner.get_alg_y() + 2*self._side_length
         self._center = Point.from_inverse_mod_func(center_x, center_y, self._inverse_mod_func)
 
         self._fill_box_list(bottom_left_corner, i, inverse_mod_func)
@@ -219,7 +215,6 @@ class IQuad:
 
     def _fill_box_list(self, bottom_left_corner, i, inverse_mod_func):
         self._boxes = [[None, None, None, None] for i in range(0,4)]
-        self._side_length = 2**i
 
         for x_steps in [0, 1, 2, 3]:
             for y_steps in [0, 1, 2, 3]:

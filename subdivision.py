@@ -180,9 +180,6 @@ class PointSubdivision:
                 for coord in S_coords.difference(R_1_whole):
                     self._drawn.add_square(coord[0], coord[1], 2**(self._i))
                     self._newly_drawn.add_square(coord[0], coord[1], 2**(self._i))
-
-
-
     
     def _children_of_component(self, S):
         children = []
@@ -203,7 +200,6 @@ class PointSubdivision:
 
         for i, q1 in enumerate(S):
             for j, q2 in enumerate(S):
-                # NOT ACCURATE MAY NOT FIT BC OF SHIFT FOR VALID IBOX
                 if i != j and q1.does_closure_overlap(q2):
                     q1_bottom_left = q1.get_bottom_left_corner()
                     q2_bottom_left = q2.get_bottom_left_corner()
