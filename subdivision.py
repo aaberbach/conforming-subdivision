@@ -2,6 +2,8 @@ import pyglet
 from pyglet import shapes
 import networkx as nx
 from objects import *
+from shapely.geometry import LineString
+from shapely.geometry import Point as P
 
 # Given a point, return the bottom left corner
 # of the ibox it is in
@@ -276,16 +278,94 @@ class PointSubdivision:
         return results
 
 class CircleSubdivision:
-    def __init__(self, circles):
+    def __init__(self, circles, inverse_mod_func):
         self._circles = circles
+        self._point_subdivision_graph = None
+        self._subdivision_graph = None
 
-    def __init__(self):
+        self._inverse_mod_func = inverse_mod_func
+
+    def __init__(self, inverse_mod_func):
         self._circles = []
+        self._point_subdivision_graph = None
+        self._subdivision_graph = None
+        self._inverse_mod_func = inverse_mod_func
 
     def get_circles(self):
         return self._circles
+    
+    def get_subdivision_graph(self):
+        return self._subdivision_graph
 
     def add_circle(self, c):
         self._circles.append(c)
 
+    def add_subdivision_graph(self, g):
+        self._point_subdivision_graph = g
+
+    def compute_subdivision_graph(self):
+        g = self._point_subdivision_graph.get_G()
+
+        def remove_node_if_exists(g, n):
+            if g.has_node(n):
+                g.remove_node(n)
+
+        def circle_edge_intersection(c, u, v):
+            p = P(c.get_center().get_alg_x(), c.get_center().get_alg_y())
+            c = p.buffer(c.get_alg_r()).boundary
+            l = LineString([u, v])
+            i = c.intersection(l)
+
+            if i.is_empty:
+                return []
+            elif i.geom_type == 'Point':
+                return [(i.x, i.y)]
+            else:
+                return [(i.geoms[0].x, i.geoms[0].y), (i.geoms[1].x, i.geoms[1].y)]
+            
+        def d(u, v):
+            return math.sqrt((u[0] - v[0])**2 + (u[1] - v[1])**2)
+        
+        for c in self._circles:
+            for u,v in [e for e in g.edges()]:
+                u_in_c = c.coord_in_interior(u[0], u[1])
+                v_in_c = c.coord_in_interior(v[0], v[1])
+
+                if u_in_c and v_in_c:
+                    remove_node_if_exists(g, u)
+                    remove_node_if_exists(g, v)
+                else:
+                    intersections = circle_edge_intersection(c, u, v)
+
+                    if len(intersections) == 2:
+                        i1 = intersections[0]
+                        i2 = intersections[1]
+
+                        if d(i1, u) < d(i1, v):
+                            i1_partner = u
+                            i2_partner = v
+                        else:
+                            i1_partner = v
+                            i2_partner = u
+
+                        g.add_edge(i1_partner, i1)
+                        g.add_edge(i2_partner, i2)
+                        g.remove_edge(u, v)
+                    elif len(intersections) == 1:
+                        if u_in_c:
+                            in_c = u
+                            out_c = v
+                        else:
+                            in_c = v
+                            out_c = u
+                        
+                        g.add_edge(out_c, intersections[0])
+                        remove_node_if_exists(g, in_c)
+
+
+        self._subdivision_graph = Graph.from_G(g, self._inverse_mod_func)
+
+    def remove_node_if_exists(g, n):
+        if g.has_node(n):
+            g.remove_node(n)
     

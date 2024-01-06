@@ -23,20 +23,17 @@ class Manager:
 
 class CircleInputManager(Manager):
     def __init__(self, mod_func, inverse_mod_func, instruction_bar):
-        self._circle_subdivision = CircleSubdivision()
+        self._circle_subdivision = CircleSubdivision(inverse_mod_func)
         self._circle_drawer = CircleSubdivisionDrawer(self._circle_subdivision)
 
         self._instruction_bar = instruction_bar
         self._instruction_bar.set_line1('<font size="5">Click and drag to input circles. Circles cannot be too small or too close to eachother for visualization reasons.</font>')
         self._instruction_bar.set_line2('<font size="5" color="#AD4D02">red</font><font size="5"> = invalid</font><font size="5" color="#009E73">  green</font><font size="5"> = valid</font>')
-        # self._point_subdivision = PointSubdivision()
-        # self._point_drawer = PointSubdivisionDrawer(self._point_subdivision)
 
         self._mod_func = mod_func
         self._inverse_mod_func = inverse_mod_func
 
         self._temp_circle_batch = pyglet.graphics.Batch()
-        print("Temp circle batch", self._temp_circle_batch)
         self._temp_circle = None
         self._temp_center = None
 
@@ -160,19 +157,15 @@ class PointSubdivisionManager(Manager):
             else:
                 # Time to move on to the Circle Subdivision manager
                 if self._done:
-                    pass
-                # #The subdivision is done being built
-                # elif len(self._point_subdivision.get_Q()) == 1:
-                #     self._done = True
-
-                #     self._instruction_bar.set_line1('<font size="5">The point subdivision is done, we will now add in the circles!</font>')
-                #     self._instruction_bar.set_line2("")
+                    return CircleSubdivisionManager(self._circle_subdivision, self._circle_drawer,
+                                    self._point_subdivision.get_drawn_subdiv(), self._mod_func,
+                                    self._inverse_mod_func, self._instruction_bar)
                 # The normal progression
                 else:
                     if self._stage == 1:
                         self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> We now grow the grid for this stage.</font>')
                     elif self._stage == 2:
-                        self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> We now show the parts of this grid that are added to the subdivision.</font>')
+                        self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> We now show the contributions of this stage to the final subdivision.</font>')
                     elif self._stage == 3:
                         self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> Finally, we show everything combined.</font>')
                     else:
@@ -190,3 +183,26 @@ class PointSubdivisionManager(Manager):
                     self._stage += 1
             
             self._point_drawer.update_batches()
+
+
+class CircleSubdivisionManager(Manager):
+    def __init__(self, circle_subdivision, circle_drawer, point_suvdivision_graph, mod_func, inverse_mod_func, instruction_bar):
+        self._circle_subdivision = circle_subdivision
+        self._circle_subdivision.add_subdivision_graph(point_suvdivision_graph)
+        self._circle_subdivision.compute_subdivision_graph()
+
+        self._circle_drawer = circle_drawer
+        self._circle_drawer.set_all_circle_opacities(255)
+        self._circle_drawer.update_subdiv_batch()
+
+        self._instruction_bar = instruction_bar
+
+        self._mod_func = mod_func
+        self._inverse_mod_func = inverse_mod_func
+
+        self._instruction_bar.set_line1('')
+        self._instruction_bar.set_line2('<font size="6">Done!</font>')
+        self._instruction_bar.set_enter_label_visibility(False)
+        
+    def on_draw(self):
+        self._circle_drawer.draw()

@@ -24,10 +24,10 @@ pyglet.gl.glClearColor(24/255,24/255,24/255,1)
 
 
 def mod_func(x, y):
-    return x + 0.5, y + 0.5
+    return x + 0.5093845908340958034985039485, y + 0.5093845908340958034985039485
 
 def inverse_mod_func(x, y):
-    return x - 0.5, y - 0.5
+    return x - 0.5093845908340958034985039485, y - 0.5093845908340958034985039485
 
 instruction_bar = InstructionBar(width, height, height * 0.15)
 manager = CircleInputManager(mod_func, inverse_mod_func, instruction_bar)
@@ -41,23 +41,6 @@ def on_draw():
 
     manager.on_draw()
     instruction_bar.draw()
-
-# @window.event       
-# def on_resize(width, height):
-#     pass
-#     # glMatrixMode(gl.GL_PROJECTION)
-#     # glLoadIdentity()
-
-#     # glViewport(0, 0, width, height)
-#     # gluOrtho2D(0, self.default_width, 0, self.default_height)
-#     # glMatrixMode(gl.GL_MODELVIEW)
-#     # glViewport(0, 0, *window.get_framebuffer_size())
-#     # window.projection = Mat4.orthogonal_projection(0, width, 0, height, -255, 255)
-    
-# @window.event
-# def on_resize(width, height):
-#     if width != 1500 or height != 1000:
-#         window.set_size(1500, 1000)
 
 # key press event 
 @window.event
@@ -73,15 +56,11 @@ def on_key_press(symbol, modifier):
 @window.event
 def on_mouse_drag(x, y, dx, dy, buttons, modifiers):
     manager.on_mouse_drag(x, y, dx, dy, buttons, modifiers)
-    # printing some message
-    #print(f"{x},{y}   {dx},{dy}")
 	
 @window.event
 def on_mouse_press(x, y, button, modifiers):
     print(x, y)
     manager.on_mouse_press(x, y, button, modifiers)
-    # p = Point(x, y)
-    # subdivision.add_point(p)
 
 
 @window.event

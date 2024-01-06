@@ -10,9 +10,6 @@ class Point:
         self._alg_x = alg_x
         self._alg_y = alg_y
 
-        # if x == alg_x or y == alg_y or alg_x is None or alg_y is None:
-        #     raise Exception()
-        
         if alg_x is None:
             self._alg_x = self._x
         if alg_y is None:
@@ -60,7 +57,6 @@ class Point:
             return self.distance(p.get_alg_x(), p.get_alg_y())
         else:
             return self.distance(p.get_x(), p.get_y())
-        #return math.sqrt((p.get_x() - self._x)**2 + (p.get_y() - self._y)**2)
 
     def distance(self, x, y, mod_func=None):
         if not (mod_func is None):
@@ -101,6 +97,10 @@ class Circle:
     
     def get_shape(self):
         return self._shape
+    
+    def coord_in_interior(self, x, y):
+        d = self._center.distance(x, y, mod_func=lambda x,y: (x,y))
+        return d < self.get_alg_r()
     
 class Edge:
     def __init__(self, p1: Point, p2: Point) -> None:
@@ -273,6 +273,16 @@ class Graph:
         self._edges = []
         self._inverse_mod_func = inverse_mod_func
 
+    def from_G(G, inverse_mod_func):
+        result = Graph(inverse_mod_func)
+
+        for node in G.nodes():
+            result.add_vertex(node)
+        for e in G.edges():
+            result.add_edge(e[0], e[1])
+
+        return result
+
     def add_vertex(self, v):
         if not v in self._G:
             self._G.add_node(v)
@@ -294,6 +304,9 @@ class Graph:
     
     def get_edges(self):
         return self._edges
+    
+    def get_G(self):
+        return self._G
     
     def delete_shapes(self):
         for p in self._points:
