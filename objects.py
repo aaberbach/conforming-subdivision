@@ -135,7 +135,7 @@ class IBox:
 
         if (bottom_left_corner.get_alg_x() % self._side_length != 0
             or bottom_left_corner.get_alg_y() % self._side_length != 0):
-            raise Exception("Not a valid IBox", bottom_left_corner.get_alg_x(), bottom_left_corner.get_alg_y(), side_length)
+            raise Exception("Not a valid IBox", bottom_left_corner.get_alg_x(), bottom_left_corner.get_alg_y(), self._side_length)
 
         self._inverse_mod_func = inverse_mod_func
 
@@ -294,6 +294,12 @@ class Graph:
     
     def get_edges(self):
         return self._edges
+    
+    def delete_shapes(self):
+        for p in self._points:
+            p.delete_shape()
+        for e in self._edges:
+            e.delete_shape()
 
     # Adds a square to the graph with bottom left corner (x, y)
     #  - break_in_fourths_flags tells whether to break up the edges, going in CW order

@@ -59,6 +59,9 @@ class PointSubdivision:
     def add_point(self, p):
         self._points.append(p)
 
+    def get_stage(self):
+        return self._i
+
     def get_Q(self):
         return self._Q
     
@@ -85,13 +88,13 @@ class PointSubdivision:
 
         for p in self._points:
             box_alg_x, box_alg_y = ibox_of_point(p.get_alg_x(), p.get_alg_y(), self._i)
-            #box_alg_x = ((p.get_alg_x() // side_length) * side_length)
-            #box_alg_y = ((p.get_alg_y() // side_length) * side_length)
 
             quad_alg_x = box_alg_x - side_length
             quad_alg_y = box_alg_y - 2*side_length
 
             self._drawn.add_square(box_alg_x, box_alg_y, side_length)
+            self._newly_drawn.add_square(box_alg_x, box_alg_y, side_length)
+
 
             bottom_left_corner = Point.from_inverse_mod_func(quad_alg_x, quad_alg_y, self._inverse_mod_func)
             self._Q.append([IQuad(bottom_left_corner, i, self._inverse_mod_func)])
@@ -131,7 +134,6 @@ class PointSubdivision:
         self._process_simple_components()
         self._process_complex_components()
     
-    # MIGHT NOT BE WORKING, CONSIDER VERY CLOSE POINTS
     def _process_simple_components(self):
         for component in self._previous_Q:
             if len(component) == 1:
@@ -176,7 +178,6 @@ class PointSubdivision:
                     self._drawn.add_square(coord[0], coord[1], 2**(self._i - 2))
                     self._newly_drawn.add_square(coord[0], coord[1], 2**(self._i - 2))
                 
-                # STILL NEED TO SPLIT EDGES
                 for coord in S_coords.difference(R_1_whole):
                     self._drawn.add_square(coord[0], coord[1], 2**(self._i))
                     self._newly_drawn.add_square(coord[0], coord[1], 2**(self._i))
@@ -200,7 +201,7 @@ class PointSubdivision:
 
         for i, q1 in enumerate(S):
             for j, q2 in enumerate(S):
-                if i != j and q1.does_closure_overlap(q2):
+                if i > j and q1.does_closure_overlap(q2):
                     q1_bottom_left = q1.get_bottom_left_corner()
                     q2_bottom_left = q2.get_bottom_left_corner()
 
@@ -209,15 +210,18 @@ class PointSubdivision:
 
                     core_bottom_left_x, core_bottom_left_y = ibox_of_point(min_x, min_y, self._i)
 
+                    containable_in_core = True
+
                     for q in [q1, q2]:
                         y_diff = q.get_boxes()[0][3].get_vertices()[0][1].get_alg_y() - core_bottom_left_y
                         x_diff = q.get_boxes()[3][0].get_vertices()[1][0].get_alg_x() - core_bottom_left_x
 
                         # Checks if the quad surpases the core boundary
                         if y_diff > 2*(2**self._i) or x_diff > 2*(2**self._i):
-                            continue
+                            containable_in_core = False
 
-                    G.add_edge(i, j)
+                    if containable_in_core:
+                        G.add_edge(i, j)
 
         matching = nx.maximal_matching(G)
 

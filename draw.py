@@ -68,28 +68,33 @@ class PointSubdivisionDrawer:
         if not (self._subdivision.get_Q() is None):
             for equiv_class in self._subdivision.get_Q():
                 for iquad in equiv_class:
-                    add_iquad_to_batch(iquad, self._Q_batch)
+                    add_iquad_to_batch(iquad, self._Q_batch, color=(0, 158, 115))
 
         if not (self._subdivision.get_prev_Q() is None):
             for equiv_class in self._subdivision.get_prev_Q():
                 for iquad in equiv_class:
-                    add_iquad_to_batch(iquad, self._prev_Q_batch, color=(230, 159, 0))
+                    add_iquad_to_batch(iquad, self._prev_Q_batch, color=(0,114,178))#(86,180,233))
 
         if not (self._subdivision.get_drawn_subdiv() is None):
             add_graph_to_batch(self._subdivision.get_drawn_subdiv(), 
-                    batch = self._drawn_batch, color=(255, 0, 0))
+                    batch = self._drawn_batch, color=(213, 94, 0))
 
         if not (self._subdivision.get_newly_drawn_subdiv() is None):
             add_graph_to_batch(self._subdivision.get_newly_drawn_subdiv(), 
-                    batch = self._drawn_batch, color=(0, 255, 0))
+                    batch = self._newly_drawn_batch, color=(230, 159, 0))
 
-    def draw(self):
-        self.update_points()
+    def draw(self, ordered_batches=["prev_Q", "Q", "drawn", "newly_drawn"]):
         self._point_batch.draw()
-        self._prev_Q_batch.draw()
-        self._Q_batch.draw()
-        self._drawn_batch.draw()
-        self._newly_drawn_batch.draw()
+
+        for batch_name in ordered_batches:
+            if batch_name == "prev_Q":
+                self._prev_Q_batch.draw()
+            if batch_name == "Q":
+                self._Q_batch.draw()
+            if batch_name == "drawn":
+                self._drawn_batch.draw()
+            if batch_name == "newly_drawn":
+                self._newly_drawn_batch.draw()
 
 class CircleSubdivisionDrawer:
     def __init__(self, subdivision: CircleSubdivision) -> None:

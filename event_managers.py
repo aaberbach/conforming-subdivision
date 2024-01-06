@@ -88,7 +88,7 @@ class CircleInputManager(Manager):
 
     def next_manager(self):
         return PointSubdivisionManager(self._circle_subdivision, self._circle_drawer,
-                    self._mod_func, self._inverse_mod_func)
+                    self._mod_func, self._inverse_mod_func, self._instruction_bar)
 
     def _is_temp_circle_valid(self, r):
         if r < 32:
@@ -106,10 +106,15 @@ class CircleInputManager(Manager):
         return True
     
 class PointSubdivisionManager(Manager):
-    def __init__(self, circle_subdivision, circle_drawer, mod_func, inverse_mod_func):
+    def __init__(self, circle_subdivision, circle_drawer, mod_func, inverse_mod_func, instruction_bar):
         self._circle_subdivision = circle_subdivision
         self._circle_drawer = circle_drawer
         self._circle_drawer.set_all_circle_opacities(100)
+
+        self._instruction_bar = instruction_bar
+
+        self._done = False
+        self._stage = -1
 
         self._mod_func = mod_func
         self._inverse_mod_func = inverse_mod_func
@@ -123,18 +128,65 @@ class PointSubdivisionManager(Manager):
                                                    inverse_mod_func=self._inverse_mod_func)
         self._point_drawer = PointSubdivisionDrawer(self._point_subdivision)
 
-        #self._point_subdivision._initialize_subdivision(3)
-        #self._point_drawer.update_batches()
+        self._instruction_bar.set_line1('<font size="5">First, we build a conforming subdivision for the arc endpoints in white.</font>')
+        self._instruction_bar.set_line2('<font size="4">We build the subdivision in stages of increasing size. Each stage has its own grid, only part of which is saved into the final subdivision.</font>')
 
     def on_draw(self):
         self._circle_drawer.draw()
-        self._point_drawer.draw()
+
+        if self._done:
+            self._point_drawer.draw(["drawn"])
+        elif self._stage == -1:
+            self._point_drawer.draw([])
+        elif self._stage == 1:
+            self._point_drawer.draw(["prev_Q"])
+        elif self._stage == 2:
+            self._point_drawer.draw(["prev_Q", "Q"])
+        elif self._stage == 3:
+            self._point_drawer.draw(["prev_Q", "Q", "newly_drawn"])
+        else:
+            self._point_drawer.draw()
 
     def on_key_press(self, symbol, modifier):
         if symbol == pyglet.window.key.ENTER:
+            # If the base structure has not already been initialized
             if not self._point_subdivision.is_initialized():
                 self._point_subdivision._initialize_subdivision(3)
+                self._instruction_bar.set_line1('<font size="5">We start with this base at <b>Stage 3</b> and will increase the stage by 2 each time.</font>')
+                self._instruction_bar.set_line2('<font size="5" color="#009E73">green</font><font size="5"> = current stage grid</font><font size="5" color="#0072B2">  blue</font><font size="5"> = previous stage grid</font><font size="5" color="#AD4D02">  red</font><font size="5"> = saved subdivision</font><font size="5" color="#E69F00">  orange</font><font size="5"> = newly saved subdivision</font>')
+
+                # Means we are ready to move to the next stage
+                self._stage = 4
             else:
-                self._point_subdivision._next_stage()
+                # Time to move on to the Circle Subdivision manager
+                if self._done:
+                    pass
+                # #The subdivision is done being built
+                # elif len(self._point_subdivision.get_Q()) == 1:
+                #     self._done = True
+
+                #     self._instruction_bar.set_line1('<font size="5">The point subdivision is done, we will now add in the circles!</font>')
+                #     self._instruction_bar.set_line2("")
+                # The normal progression
+                else:
+                    if self._stage == 1:
+                        self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> We now grow the grid for this stage.</font>')
+                    elif self._stage == 2:
+                        self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> We now show the parts of this grid that are added to the subdivision.</font>')
+                    elif self._stage == 3:
+                        self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> Finally, we show everything combined.</font>')
+                    else:
+                        #The subdivision is done being built
+                        if len(self._point_subdivision.get_Q()) == 1:
+                            self._done = True
+
+                            self._instruction_bar.set_line1('<font size="5">The point subdivision is done, we will now add in the circles!</font>')
+                            self._instruction_bar.set_line2("")
+                        else:
+                            self._point_subdivision._next_stage()
+                            self._instruction_bar.set_line1(f'<font size="5"><b>Stage {self._point_subdivision.get_stage()}: </b> Here is the grid from the last stage.</font>')
+                            self._stage = 0
+
+                    self._stage += 1
             
             self._point_drawer.update_batches()
